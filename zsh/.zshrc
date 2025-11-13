@@ -2,7 +2,7 @@ export NVM_DIR="$HOME/.nvm"
   [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"  # This loads nvm
   [ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
 export ORG_HOME="$HOME/org-roam"
-export PATH=$PATH:$HOME/go/bin:~/.config/emacs/bin:$HOME/bin
+export PATH=$PATH:$HOME/go/bin:~/.config/emacs/bin:$HOME/bin:/opt/homebrew/bin
 
 alias nvimconf="cd ~/.config/nvim && nvim" 
 alias garden="cd ~/Documents/garden && nvim"
@@ -20,4 +20,4 @@ bindkey "\ej" down-line-or-history
 bindkey "\ek" up-line-or-history
 bindkey "\el" forward-word
 
-eval "$(zoxide init zsh --cmd cd)"
+# eval "$(zoxide init zsh --cmd cd)"

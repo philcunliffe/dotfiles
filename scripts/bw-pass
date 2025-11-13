@@ -1,0 +1,46 @@
+#!/usr/bin/env fish
+# qutebrowser userscript — Bitwarden lookup for macOS + fish
+# Requirements: bitwarden-cli, jq, fzf  (all available via Homebrew)
+
+set -e
+
+# -------- helpers --------
+function notify
+    # macOS notification (no extra deps)
+    osascript -e "display notification \"$argv[2]\" with title \"$argv[1]\""
+end
+
+# choose your clipboard & picker
+set copy_cmd pbcopy               # built-in
+set menu_cmd "fzf --prompt='Bitwarden❯ '"  # brew install fzf
+
+# -------- check Bitwarden session --------
+bw sync --quiet
+or begin
+    notify Bitwarden "Run 'bw unlock' in a terminal first"
+    exit 1
+end
+
+# -------- search the vault --------
+set query (count $argv) ? $argv[1] : ""
+set rows (bw list items --search $query --raw | jq -r '.[] | [.id, .name] | @tsv')
+
+if test -z "$rows"
+    notify Bitwarden "No vault items matching '$query'"
+    exit 1
+end
+
+# if >1 hit, let user pick
+if test (count $rows) -gt 1
+    set choice (printf '%s\n' $rows | cut -f2 | eval $menu_cmd)
+    test -z "$choice"; and exit 0  # Esc pressed
+    set id (string match -r "^(\\S+)\t$choice" $rows | cut -f1)
+else
+    set id (echo $rows | cut -f1)
+end
+
+# -------- copy password --------
+set pw (bw get password $id --raw)
+printf "%s" $pw | $copy_cmd
+notify Bitwarden "Password copied to clipboard ✔"
+
