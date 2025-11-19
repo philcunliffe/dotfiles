@@ -57,7 +57,19 @@
   :recipe (:host github :repo "philcunliffe/dendroam" :branch "main"))
 (package! gptel :recipe (:nonrecursive t))
 (package! circadian)
-(package! claude-code
-  :recipe (:host github :repo "stevemolitor/claude-code.el" :branch "main" :files("*.el" (:exclude "demo.gif"))))
+;; (package! claude-code
+  ;; :recipe (:host github :repo "stevemolitor/claude-code.el" :branch "main" :files("*.el" (:exclude "demo.gif"))))
 (package! org-roam-logseq
   :recipe (:host github :repo "idanov/org-roam-logseq.el" :branch "main"))
+(package! websocket)
+(package! alert)
+(package! eat)
+(package! emojify)
+(package! claude-code-ide
+  :recipe (:host github :repo "manzaltu/claude-code-ide.el"))
+
+;; from https://github.com/emacs-slack/emacs-slack
+(package! slack
+  :recipe (:host github :repo "emacs-slack/emacs-slack"))
+(package! code-review)
+

@@ -34,6 +34,9 @@
 ;; `load-theme' function. This is the default:
 (setq doom-theme 'doom-one)
 
+(setq auth-sources '("~/.authinfo.gpg" "~/.authinfo"))
+
+
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
 (setq display-line-numbers-type 'relative)
@@ -192,57 +195,68 @@
   (setq org-recur-finish-done t
         org-recur-finish-archive t))
 
-;; Theme switching
-(setq calendar-latitude 47.685894187120766)
-(setq calendar-longitude -122.38633267851777)
-
-(use-package circadian
+(use-package! circadian
+  :after doom-themes
   :config
-  (setq circadian-themes '((:sunrise . doom-gruvbox-light)
-                           (:sunset . (doom-gruvbox))))
-  (add-hook 'emacs-startup-hook #'circadian-setup)
+  ;; Seattle, WA
+  (setq calendar-latitude 47.6062
+        calendar-longitude -122.3321
+        calendar-location-name "Seattle, WA")
+
+  (setq circadian-themes
+        '((:sunrise . doom-gruvbox-light)
+          (:sunset . doom-gruvbox)))
   (circadian-setup))
 
-
-(use-package claude-code
-  :bind-keymap
-  ("C-c c" . claude-code-command-map)
-  :config
-  (claude-code-mode))
+;; (use-package claude-code
+  ;; :bind-keymap
+  ;; ("C-c c" . claude-code-command-map)
+  ;; :config
+  ;; (claude-code-mode))
 
 (use-package! gptel
   :defer t
   :init
   (map! :leader
         (:prefix ("j" . "ai")
-         :desc "Open chat" "c" #'gptel
-         :desc "Add file/buffer to context" "a" #'gptel-add
-         :desc "Rewrite/Refactor" "r" #'gptel-rewrite
-         :desc "Send region to chat buffer" "l" #'gptel-send
-         :desc "Open menu" "m" #'gptel-menu))
+         :desc "Open chat"                     "c" #'gptel
+         :desc "Add file/buffer to context"    "a" #'gptel-add
+         :desc "Rewrite/Refactor"              "r" #'gptel-rewrite
+         :desc "Send region to chat buffer"    "l" #'gptel-send
+         :desc "Open menu"                     "m" #'gptel-menu
+         :desc "End of response"               "e" #'gptel-end-of-response))
   :config
-  ;; Set up Ollama backend with your custom host
-  (setq gptel-backend
-        (gptel-make-ollama "Ollama"
-                          :host "192.168.50.248:11434"
-                          :stream t
-                          :models '(gemma3:4b
-                                   )))
+  ;; ChatGPT is the default backend; it uses `gptel-api-key` which by default
+  ;; reads from ~/.authinfo (entries shown above).
 
-  ;; Set default model (adjust to whatever model you have available)
-  (setq gptel-model 'gemma3:4b)
+  ;; OPTIONAL: pick a default ChatGPT model
+  ;; (you can also just choose in `gptel-menu`).
+  (setq gptel-model 'gpt-5)
 
-  ;; Optional: Set default mode for chat buffers
-  (setq gptel-default-mode 'org-mode)
+  ;; Extra backend: Ollama on your LAN
+  (gptel-make-ollama "Ollama"
+    :host "192.168.50.248:11434"
+    :stream t
+    :models '(gemma3:4b))
 
-  ;; Optional: Customize prompt formatting
-  (setq gptel-prompt-prefix-alist
-        '((markdown-mode . "# Prompt\n\n")
-          (org-mode . "* Prompt\n\n")))
+  ;; Extra backend: Anthropic (Claude), also using authinfo
+  (gptel-make-anthropic "Anthropic"
+    :stream t
+    :key #'gptel-api-key)
+  (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
+  (add-hook 'gptel-post-response-functions 'gptel-end-of-response)
 
-  (setq gptel-response-prefix-alist
-        '((markdown-mode . "# Response\n\n")
-          (org-mode . "* Response\n\n"))))
+  ;; Optional: default mode for new chat buffers
+  ;; (setq gptel-default-mode 'org-mode)
+
+  ;; Optional: customize prompt/response prefixes
+  ;; (setq gptel-prompt-prefix-alist
+        ;; '((markdown-mode . "# Prompt\n\n")
+          ;; (org-mode      . "* Prompt\n\n"))
+        ;; gptel-response-prefix-alist
+        ;; '((markdown-mode . "# Response\n\n")
+          ;; (org-mode      . "* Response\n\n")))
+          )
 ;;
 ;; (use-package! md-roam
 ;;   :after org-roam
@@ -327,3 +341,46 @@
         (sequence "[ ](T)" "[-](S)" "[?](W)" "|" "[X](D)")
         (sequence "|" "OKAY(o)" "YES(y)" "NO(n)")))
 
+(use-package! alert
+  :commands alert
+  :init
+  (setq alert-default-style 'notifications))  ;; or 'notifier, 'libnotify, etc.
+
+(use-package! slack
+  :commands (slack-start slack-select-unread-rooms)
+  :init
+  (setq slack-buffer-emojify t
+        slack-prefer-current-team t)
+  :config
+  (slack-register-team
+   :name "work"
+   :default t
+   :token (auth-source-pick-first-password
+         :host "hyperparam.slack.com"
+         :user "phil@hyperparam.app")
+   :cookie (auth-source-pick-first-password
+         :host "hyperparam.slack.com"
+         :user "phil@hyperparam.app^cookie")
+   :subscribed-channels '(engineering)))
+
+(map! :leader
+      :desc "Slack start"  "os" #'slack-start
+      :desc "Slack unread" "ou" #'slack-select-unread-rooms)
+
+(use-package! claude-code-ide
+  :bind ("C-c c'" . claude-code-ide-menu)
+  :config
+  (setq claude-code-ide-terminal-backend 'eat)
+  (claude-code-ide-emacs-tools-setup))
+
+(use-package! code-review
+  :commands (code-review-start code-review-forge-pr-at-point)
+  :init
+  (map! :leader :desc "Code review (start by URL)" "g r" #'code-review-start)
+  :config
+  (setq code-review-auth-login-marker 'forge)
+  (map! :map magit-mode-map
+        :desc "Code review PR at point" "C-c r" #'code-review-forge-pr-at-point))
+
+(after! code-review
+  (setq code-review-fill-column 80))
